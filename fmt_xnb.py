@@ -142,6 +142,7 @@ def Texture2DReader(bs, texList):
 
 
 def ModelReader(bs, mdlList):
+    rapi.rpgSetOption(noesis.RPGOPT_SWAPHANDEDNESS, 1)#LEFT HANDED
     def read_bone_reference(bs, bone_count):
         if bone_count > 255:
             ref_id = bs.readInt()
