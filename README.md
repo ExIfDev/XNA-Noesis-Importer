@@ -6,7 +6,8 @@ A noesis script to import Microsoft XNA files (.xnb)
 # [DOWNLOAD](https://github.com/ExIfDev/XNA-Noesis-Importer/releases/latest)
 # Features
 - Textures
-- Model Skeleton 
+- Model Skeleton
+- Comp Types: LZX,LZ4
 # Roadmap
 - Finish model importer
 - Implement text viewer
