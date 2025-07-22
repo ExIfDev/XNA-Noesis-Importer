@@ -11,5 +11,6 @@ A noesis script to import Microsoft XNA, Monogame and FNA files (.xnb)
 # Roadmap
 - Finish model importer
 - Implement text viewer
+- Sprite2D reader
 
 ![GitHub all releases](https://img.shields.io/github/downloads/ExIfDev/XNA-Noesis-Importer/total?style=for-the-badge)
