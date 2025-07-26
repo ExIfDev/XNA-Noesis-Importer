@@ -1,5 +1,5 @@
 #Written by Aexadev on 21/07/2025
-#ver 0.3
+#ver 0.3.1
 from inc_noesis import *  
 import noesis, rapi, struct 
 
