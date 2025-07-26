@@ -49,7 +49,7 @@ class XNBHeader:
         if magic != b"XNB":
             noesis.doException("Invalid XNB header")
 
-        platform = bs.readByte()
+        self.platform = bs.readByte()
         version = bs.readByte()
         flags = bs.readByte()
 
@@ -93,14 +93,14 @@ def LoadAsset(data, outList):
         outList = []
 
     if "Texture2DReader" in root_reader:
-        Texture2DReader(bs, outList)
+        Texture2DReader(bs, outList, header)
     elif "ModelReader"     in root_reader:
         ModelReader(bs, outList)
 
     return 1
 
 
-def Texture2DReader(bs, texList):
+def Texture2DReader(bs, texList, header):
     reader_idx = readToken(bs)
     if reader_idx is None:    
         return    
@@ -115,7 +115,10 @@ def Texture2DReader(bs, texList):
         print("[TEX] %dx%d  fmt=%d  len=%d" % (width, height, surf_fmt, data_len))
 
     if surf_fmt == 0:
-        rgba = rapi.imageDecodeRaw(img_data, width, height, "a8b8g8r8")
+        if header.platform == 120:
+            rgba = rapi.imageDecodeRaw(img_data, width, height, "a8b8g8r8")#xbox360
+        else:
+            rgba = rapi.imageDecodeRaw(img_data, width, height, "r8g8b8a8")#pc
     elif surf_fmt == 4:
         rgba = rapi.imageDecodeDXT(img_data, width, height, noesis.FOURCC_DXT1)
     elif surf_fmt == 5:
