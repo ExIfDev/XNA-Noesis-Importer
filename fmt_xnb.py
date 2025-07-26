@@ -115,7 +115,7 @@ def Texture2DReader(bs, texList):
         print("[TEX] %dx%d  fmt=%d  len=%d" % (width, height, surf_fmt, data_len))
 
     if surf_fmt == 0:
-        rgba = rapi.imageDecodeRaw(img_data, width, height, "b8g8r8a8")
+        rgba = rapi.imageDecodeRaw(img_data, width, height, "r8b8g8a8")
     elif surf_fmt == 4:
         rgba = rapi.imageDecodeDXT(img_data, width, height, noesis.FOURCC_DXT1)
     elif surf_fmt == 5:
