@@ -11,5 +11,9 @@ Download noesis here: https://richwhitehouse.com/index.php?content=inc_projects.
 # Roadmap
 - Finish model importer
 - SpriteFont2D reader
+# Tested Games
+- Blood & Bacon (PC)
+- Plants Vs Zombies (WinPhone)
+- Mini Wizards (Xbox360)
 
 ![GitHub all releases](https://img.shields.io/github/downloads/ExIfDev/XNA-Noesis-Importer/total?style=for-the-badge)
