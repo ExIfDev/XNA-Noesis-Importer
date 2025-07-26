@@ -5,12 +5,11 @@ A noesis script to import Microsoft XNA, Monogame and FNA files (.xnb)
 Download noesis here: https://richwhitehouse.com/index.php?content=inc_projects.php&filemirror=noesisv4474.zip
 # [DOWNLOAD](https://github.com/ExIfDev/XNA-Noesis-Importer/releases/latest)
 # Features
-- Textures
+- 6 supported Texture formats
 - Model Skeleton
 - Comp Types: LZX,LZ4
 # Roadmap
 - Finish model importer
-- Implement text viewer
-- Sprite2D reader
+- SpriteFont2D reader
 
 ![GitHub all releases](https://img.shields.io/github/downloads/ExIfDev/XNA-Noesis-Importer/total?style=for-the-badge)
