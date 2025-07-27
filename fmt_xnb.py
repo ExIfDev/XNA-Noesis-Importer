@@ -1,11 +1,11 @@
-#Written by Aexadev on 27/07/2025
-#V0.5
+#Written by Aexadev on 21/07/2025
+
 from inc_noesis import *  
 import noesis, rapi, struct 
 
 
 DEBUG = 0
-HIDEF_MASK = 0x01
+HIDEF_MASK  = 0x01
 COMPRESSED_LZX_MASK = 0x80
 COMPRESSED_LZ4_MASK = 0x40
 
@@ -24,13 +24,17 @@ def registerNoesisTypes():
   
     hSpr = noesis.register("XNA SpriteFont", ".xnb")
     noesis.setHandlerTypeCheck(hSpr, ChkXnbSpriteFont)
-
+    noesis.setHandlerLoadRGBA(hSpr, NotAvaliable)
     
     hSnd = noesis.register("XNA SoundEffect", ".xnb")
     noesis.setHandlerTypeCheck(hSnd, ChkXnbSound)
+    noesis.setHandlerLoadRGBA(hSnd, NotAvaliable)
     
     hEff = noesis.register("XNA Effect", ".xnb")
     noesis.setHandlerTypeCheck(hEff, ChkXnbEffect)
+    noesis.setHandlerLoadRGBA(hEff, NotAvaliable)
+    
+
 
     return 1
 
@@ -38,6 +42,7 @@ def ChkXnbTexture(data):
     if data[:3] != b"XNB":
         return False
     return "Texture2DReader" in getFileType(data)
+
 
 def ChkXnbSpriteFont(data):
     if data[:3] != b"XNB":
@@ -57,6 +62,11 @@ def ChkXnbEffect(data):
     if data[:3] != b"XNB":
         return False
     return "Effect" in getFileType(data)
+
+
+def NotAvaliable(arg1,arg2):
+    noesis.messagePrompt("This asset type is not supported by the addon!")
+    return 1
 
 #ASSET TYPE RESOLVER
 class XNBHeader:
@@ -113,30 +123,50 @@ def LoadAsset(data, outList):
         readers.append(reader_nm)
 
     shared_cnt = read_7bit_encoded_int(bs)
-    root_reader = readers[0]
-    print(root_reader)
+    root_index = readToken(bs)
+    if root_index is None or root_index < 0 or root_index >= len(readers):
+        noesis.doException("Invalid root reader index")
+        return 0
+
+    native_reader = getNativeReader(readers, root_index)
+    if native_reader is None:
+        noesis.doException("Could not resolve reader")
+        return 0
+
+    print("Root reader:", readers[root_index])
+    print("Chosen reader:", native_reader)
+    if readers[root_index] != native_reader:
+        bs.seek(1,NOESEEK_REL)
+
+    reader = native_reader
+
+
     if outList is None:
         outList = []
 
-    if "Texture2DReader" in root_reader:
-        Texture2DReader(bs, outList, header)
-    elif "ModelReader"     in root_reader:
-        ModelReader(bs, outList,header)
-    elif "SpriteFont"     in root_reader:
+    if "Texture2DReader" in reader:
+        Texture2DReader(bs, outList, header)    
+    elif "ModelReader" in reader:
+        ModelReader(bs, outList, header)      
+    elif "SpriteFont" in reader:
         noesis.messagePrompt("SpriteFont asset is not currently supported!")
-        return
-    elif "SoundEffect"     in root_reader:
+        return 0
+    elif "SoundEffect" in reader:
         noesis.messagePrompt("SoundEffect asset is not currently supported!")
-        return
-    elif "Effect"     in root_reader:
+        return 0
+    elif "Effect" in reader:
         noesis.messagePrompt("Effect asset is not currently supported!")
-        return
-        
+        return 0
+    else:
+        noesis.doException("Unsupported root reader: %s" % reader)
+        return 0
 
     return 1
 
+
 #READERS
 def Texture2DReader(bs, texList,header):
+    bs.seek
     def unmultiplyAlpha(rgba):
         byte_rgba = bytearray(rgba)
         for i in range(0, len(byte_rgba), 4):
@@ -147,10 +177,7 @@ def Texture2DReader(bs, texList,header):
                 byte_rgba[i + 1] = min(int(byte_rgba[i + 1] * inv + 0.5), 255)
                 byte_rgba[i + 2] = min(int(byte_rgba[i + 2] * inv + 0.5), 255)
         return byte_rgba
-        
-    reader_idx = readToken(bs)
-    if reader_idx is None:    
-        return    
+    
     surf_fmt = bs.readUInt()
     width = bs.readUInt()
     height = bs.readUInt()
@@ -179,14 +206,14 @@ def Texture2DReader(bs, texList,header):
             noesis.messagePrompt("Surface Format 1 for this platform is not supported")
                
 
-    elif surf_fmt == 4:
+    elif surf_fmt == 4 or surf_fmt==28:
         if header.platform == 120:  # Xbox 360
             big_endian_data = rapi.swapEndianArray(img_data, 2)
             rgba = rapi.imageDecodeDXT(big_endian_data, width, height, noesis.FOURCC_DXT1)
         else:
             rgba = rapi.imageDecodeDXT(img_data, width, height, noesis.FOURCC_DXT1)
             
-    elif surf_fmt == 5:
+    elif surf_fmt == 5  :
         #	PYNOECONSTN(NOEBLEND_NONE),
         
 
@@ -196,7 +223,7 @@ def Texture2DReader(bs, texList,header):
         else:
             rgba = rapi.imageDecodeDXT(img_data, width, height, noesis.FOURCC_DXT3)
             
-    elif surf_fmt == 6:
+    elif surf_fmt == 6 or surf_fmt==32:
         
        
         if header.platform == 120:#xbox360
@@ -204,7 +231,7 @@ def Texture2DReader(bs, texList,header):
             rgba = rapi.imageDecodeDXT(big_endian_data, width, height, noesis.FOURCC_DXT5)
         else:
             rgba = rapi.imageDecodeDXT(img_data, width, height, noesis.FOURCC_DXT5)
-    
+        
     else:
         noesis.doException("Unsupported SurfaceFormat: %d" % surf_fmt)
         return
@@ -233,9 +260,6 @@ def ModelReader(bs, mdlList,header):
             return None
         return ref_id - 1
 
-    reader_idx = readToken(bs)
-    if reader_idx is None:
-        return
 
     boneCount = bs.readInt()
     print("[MDL] BONE_COUNT: %d" % boneCount)
@@ -309,17 +333,10 @@ def ModelReader(bs, mdlList,header):
         read_7bit_encoded_int(bs)   
         bs.seek(66,NOESEEK_REL)#unk data
         print(bs.getOffset())
-        noeBones = []
-        for i in range(boneCount):
-            bone = NoeBone(i, names[i], matrices[i], None, parents[i])
-            noeBones.append(bone)
-        noeBones = rapi.multiplyBones(noeBones)
-        rapi.rpgSetOption(noesis.RPGOPT_TRIWINDBACKWARD, 1)
-
-        if boneCount > 1:
-            noesis.messagePrompt("Skinned models are not supported yet")
-            return 0
-        else:
+        if boneCount <= 1:
+            #noesis.messagePrompt("Skinned models are not supported yet")
+            #return 0
+        
             vertPos=[]
             uv=[]
             normals=[]
@@ -371,9 +388,16 @@ def ModelReader(bs, mdlList,header):
                 noesis.RPGEO_TRIANGLE      
             )
 
+    noeBones = []
+    for i in range(boneCount):
+        bone = NoeBone(i, names[i], matrices[i], None, parents[i])
+        noeBones.append(bone)
+    noeBones = rapi.multiplyBones(noeBones)
+    rapi.rpgSetOption(noesis.RPGOPT_TRIWINDBACKWARD, 1)
+
     mdl = rapi.rpgConstructModel()
     if mdl is None:
-         mdl = NoeModel()
+        mdl = NoeModel()
 
     mdl.setBones(noeBones)
     mdlList.append(mdl)
@@ -384,16 +408,28 @@ def ModelReader(bs, mdlList,header):
 
 def getFileType(data):
     try:
-        hdr   = XNBHeader(data)                       
-        bs    = NoeBitStream(hdr.payload, NOE_LITTLEENDIAN)
-        rcnt  = read_7bit_encoded_int(bs)
-        if rcnt == 0:
-            return ""
-        nameLen   = read_7bit_encoded_int(bs)
-        readerStr = bs.readBytes(nameLen).decode("utf-8", "ignore")
-        return readerStr
+        hdr = XNBHeader(data)
+        bs  = NoeBitStream(hdr.payload, NOE_LITTLEENDIAN)
+
+
+        rcnt = read_7bit_encoded_int(bs)
+        readers = []
+        for _ in range(rcnt):
+            name_len = read_7bit_encoded_int(bs)
+            reader   = bs.readBytes(name_len).decode("utf-8", "ignore")
+            print(reader)
+            _ver     = bs.readUInt()
+            readers.append(reader)
+
+        _shared_cnt = read_7bit_encoded_int(bs)
+        root_index  = readToken(bs)  # 0-based from your helper
+        chosen = getNativeReader(readers, root_index)
+        
+        return chosen if chosen is not None else ""
     except:
         return ""
+
+
 def read_7bit_encoded_int(bs, max_bytes=5):
     result = 0
     shift = 0
@@ -411,7 +447,25 @@ def readToken(bs):
     if token == 0:
         return None           
     return token - 1      
+def isNative(name: str) -> bool:
 
+    return "Microsoft.Xna.Framework.Content" in name
+
+def getNativeReader(readers, root_index):
+
+    if root_index is None or root_index < 0 or root_index >= len(readers):
+        return None
+
+    root_reader = readers[root_index]
+    if isNative(root_reader):
+        return root_reader
+
+    for i in range(root_index + 1, len(readers)):
+        if isNative(readers[i]):
+            return readers[i]
+
+
+    return root_reader
 def createDebugDump(bs):
     if DEBUG:
         try:
