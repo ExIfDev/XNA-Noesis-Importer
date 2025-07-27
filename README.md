@@ -8,7 +8,7 @@ Download noesis here: https://richwhitehouse.com/index.php?content=inc_projects.
 # Features
 - 7 supported Texture formats
 - Skeleton
-- Unskinned Mesh (UV, Normals,Verts, Faces) {PC platform only}
+- Unskinned Mesh (UV, Normals, Verts, Faces) {PC platform only}
 - Comp Types: LZX,LZ4
 # Roadmap
 - Finish model importer
