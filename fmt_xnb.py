@@ -4,7 +4,7 @@ from inc_noesis import *
 import noesis, rapi, struct  # type: ignore
 import os, time, zipfile, traceback
 
-DEBUG = 1
+DEBUG = 0
 HIDEF_MASK  = 0x01
 COMPRESSED_LZX_MASK = 0x80
 COMPRESSED_LZ4_MASK = 0x40
