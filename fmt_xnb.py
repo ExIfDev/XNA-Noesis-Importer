@@ -4,12 +4,15 @@ from inc_noesis import *
 import noesis, rapi, struct  # type: ignore
 import os, time, zipfile, traceback
 
-DEBUG = 0
+DEBUG = 1
 HIDEF_MASK  = 0x01
 COMPRESSED_LZX_MASK = 0x80
 COMPRESSED_LZ4_MASK = 0x40
 
-PluginVer = "0.4.3"
+PluginVer = "0.5"
+
+PLATFORM_XBOX360 =120
+PLATFORM_PC=119
 
 #NOESIS 
 def registerNoesisTypes():
@@ -65,7 +68,6 @@ def ChkXnbEffect(data):
 
 
 
-
 #ASSET TYPE RESOLVER
 class XNBHeader:
     def __init__(self, data):
@@ -108,6 +110,7 @@ class XNBHeader:
 
 
 def LoadAsset(data, outList):
+    if DEBUG : noesis.logPopup()
     rapi.rpgCreateContext()
     header = XNBHeader(data)
     bs = NoeBitStream(header.payload, NOE_LITTLEENDIAN)
@@ -134,6 +137,7 @@ def LoadAsset(data, outList):
     print("Root reader:", readers[root_index])
     print("Chosen reader:", native_reader)
     if readers[root_index] != native_reader:
+
         bs.seek(1,NOESEEK_REL)
 
     reader = native_reader
@@ -143,18 +147,19 @@ def LoadAsset(data, outList):
         outList = []
 
     if "Texture2DReader" in reader:
-        Texture2DReader(bs, outList, header)      # token already consumed
+        Texture2DReader(bs, outList, header)    
     elif "ModelReader" in reader:
-        ModelReader(bs, outList, header)          # token already consumed
+        ModelReader(bs, outList, header)         
     elif "SpriteFont" in reader:
-        noesis.messagePrompt("SpriteFont asset is not currently supported!")
-        return 0
+        SpriteFontReader(bs, outList, header)
+
     elif "SoundEffect" in reader:
         noesis.messagePrompt("SoundEffect asset is not currently supported!")
         return 0
     elif "Effect" in reader:
-        noesis.messagePrompt("Effect asset is not currently supported!")
+        noesis.messagePrompt("Effect asset cant be supported as its compiled shader bytecode!")
         return 0
+
     else:
         noesis.doException("Unsupported root reader: %s" % reader)
         return 0
@@ -188,51 +193,59 @@ def Texture2DReader(bs, texList,header):
         if DEBUG:
             noesis.logPopup()
             print("[TEX] %dx%d  fmt=%d  len=%d" % (width, height, surf_fmt, data_len))
-
-        if surf_fmt == 0:
-            if header.platform == 120:#xbox360
+        #360--------------------------------------------    
+        if header.platform == PLATFORM_XBOX360:
+            if surf_fmt == 0:
                 rgbma = rapi.imageDecodeRaw(img_data, width, height, "a8b8g8r8")
-                rgba = unmultiplyAlpha(rgbma)
-            else: 
-                rgbma = rapi.imageDecodeRaw(img_data, width, height, "r8g8b8a8")
-                rgba = unmultiplyAlpha(rgbma)
+                rgba = unmultiplyAlpha(rgbma) 
+                               
+            elif surf_fmt == 1:
+                rgba = rapi.imageDecodeRaw(img_data, width, height, "a8b8g8r8")                 
+                 
+            elif surf_fmt == 4:
+                big_endian_data = rapi.swapEndianArray(img_data, 2)
+                rgba = rapi.imageDecodeDXT(big_endian_data, width, height, noesis.FOURCC_DXT1)                
                 
-        elif surf_fmt ==1:
-            if header.platform == 120:
-                rgba = rapi.imageDecodeRaw(img_data, width, height, "a8b8g8r8")
+            elif surf_fmt == 5:
+                big_endian_data = rapi.swapEndianArray(img_data, 2)
+                rgba = rapi.imageDecodeDXT(big_endian_data, width, height, noesis.FOURCC_DXT3)   
+                             
+            elif surf_fmt == 6:
+                big_endian_data = rapi.swapEndianArray(img_data, 2)
+                rgba = rapi.imageDecodeDXT(big_endian_data, width, height, noesis.FOURCC_DXT5)          
                 
-            else:
-                noesis.messagePrompt("Surface Format 1 for this platform is not supported")
-                
-
-        elif surf_fmt == 4 or surf_fmt==28:
-            if header.platform == 120:  # Xbox 360
+            elif surf_fmt == 28:
                 big_endian_data = rapi.swapEndianArray(img_data, 2)
                 rgba = rapi.imageDecodeDXT(big_endian_data, width, height, noesis.FOURCC_DXT1)
-            else:
-                rgba = rapi.imageDecodeDXT(img_data, width, height, noesis.FOURCC_DXT1)
-                
-        elif surf_fmt == 5  :
-            #	PYNOECONSTN(NOEBLEND_NONE),
             
-
-            if header.platform == 120:#xbox360
-                big_endian_data = rapi.swapEndianArray(img_data, 2)
-                rgba = rapi.imageDecodeDXT(big_endian_data, width, height, noesis.FOURCC_DXT3)
-            else:
-                rgba = rapi.imageDecodeDXT(img_data, width, height, noesis.FOURCC_DXT3)
-                
-        elif surf_fmt == 6 or surf_fmt==32:
-            
-        
-            if header.platform == 120:#xbox360
+            elif surf_fmt == 32:
                 big_endian_data = rapi.swapEndianArray(img_data, 2)
                 rgba = rapi.imageDecodeDXT(big_endian_data, width, height, noesis.FOURCC_DXT5)
             else:
+                noesis.doException("Unsupported SurfaceFormat: %d" % surf_fmt )
+                return                                  
+             
+        #PC---------------------------------
+        elif header.platform == PLATFORM_PC:
+            if surf_fmt == 0:
+                rgbma = rapi.imageDecodeRaw(img_data, width, height, "r8g8b8a8")
+                rgba = unmultiplyAlpha(rgbma)
+                
+            elif surf_fmt == 4:
+                rgba = rapi.imageDecodeDXT(img_data, width, height, noesis.FOURCC_DXT1)
+                
+            elif surf_fmt == 5:
+                rgba = rapi.imageDecodeDXT(img_data, width, height, noesis.FOURCC_DXT3)
+                
+            elif surf_fmt == 6:
                 rgba = rapi.imageDecodeDXT(img_data, width, height, noesis.FOURCC_DXT5)
+                
+            else:
+                noesis.doException("Unsupported SurfaceFormat: %d" % surf_fmt )
+                return
             
         else:
-            noesis.doException("Unsupported SurfaceFormat: %d" % surf_fmt)
+            noesis.doException("Unsupported platform: %d" % header.platform )
             return
 
         tex = NoeTexture("xnb_tex", width, height, bytes(rgba), noesis.NOESISTEX_RGBA32)
@@ -241,6 +254,7 @@ def Texture2DReader(bs, texList,header):
         return 1
     except Exception as e:
         print(e)
+        noesis.doException(e)
         if DEBUG == False: 
             path = noesis.userPrompt( noesis.NOEUSERVAL_FOLDERPATH,
                                     "We have hit an error! Please create the debug dump or close.",
@@ -260,8 +274,63 @@ def Texture2DReader(bs, texList,header):
                 }
                 debugData(path,dat,ds)
         
-    
 
+    
+def SpriteFontReader(bs, outList, header):
+    try:
+        if DEBUG: 
+            print("[SF] Begin SpriteFontReader at 0x%X" % bs.getOffset())
+        tex_tok = readToken(bs)
+        if tex_tok is None:
+            noesis.doException("SpriteFont: missing Texture2D token")
+            return 0
+        Texture2DReader(bs, outList, header)
+        glyphs_tok = readToken(bs)
+        glyphs = _read_rectangle_list(bs) if glyphs_tok is not None else []
+        crop_tok = readToken(bs)
+        cropping = _read_rectangle_list(bs) if crop_tok is not None else []
+        chmap_tok = readToken(bs)
+        character_map = _read_char_list(bs) if chmap_tok is not None else []
+        vertical_line_spacing = bs.readInt()
+        horizontal_spacing = bs.readFloat()
+        kerning_tok = readToken(bs)
+        kerning = _read_vector3_list(bs) if kerning_tok is not None else []
+        default_char = _read_nullable_char(bs)
+
+        if DEBUG:
+            print("[SF] glyphs:", len(glyphs))
+            print("[SF] cropping:", len(cropping))
+            print("[SF] charMap:", len(character_map))
+            print("[SF] vLineSpacing:", vertical_line_spacing)
+            print("[SF] hSpacing:", horizontal_spacing)
+            print("[SF] kerning:", len(kerning))
+            print("[SF] defaultChar:", default_char)
+
+        return 1
+
+    except Exception as e:
+        print(e)
+        noesis.doException(e)
+        if DEBUG == False:
+            path = noesis.userPrompt(
+                noesis.NOEUSERVAL_FOLDERPATH,
+                "We have hit an error! Please create the debug dump or close.",
+                "Please enter a save path for the debug file then submit to the developer",
+            )
+            dat = ("Exception hit in SpriteFontReader", e, "PluginVer", PluginVer,
+                   "PLATFORM", header.platform, "XNA version", header.version)
+            if path:
+                fn = os.path.basename(rapi.getInputName())
+                with open(rapi.getInputName(), "rb") as f:
+                    ogfile = f.read()
+                fname = fn[:-3] + "bin"
+                ds = {
+                    fname: bs.getBuffer(),  # decompressed stream
+                    os.path.basename(rapi.getInputName()): ogfile
+                }
+                debugData(path, dat, ds)
+        return 0
+    
 
 def ModelReader(bs, mdlList,header):
     try:
@@ -426,23 +495,23 @@ def ModelReader(bs, mdlList,header):
         rapi.setPreviewOption("setSkelToShow", "1")
     except Exception as e:
         print(e)
-        if DEBUG == False: 
-            path = noesis.userPrompt( noesis.NOEUSERVAL_FOLDERPATH,
+        
+        path = noesis.userPrompt( noesis.NOEUSERVAL_FOLDERPATH,
                                     "We have hit an error! Please create the debug dump or close.",
                                     "Please enter a save path for the debug file then submit to the developer",
                                     )
-            dat= ("Exception hit in ModelReader",e,"PluginVer",PluginVer,"PLATFORM",header.platform,"XNA version",header.version)
-            if path:      
-                fn = os.path.basename(rapi.getInputName())
-                with open (rapi.getInputName(),"rb") as f:
-                    ogfile = f.read()
-                fname = fn[:-3] + "bin"
-                ds={
-                    fname: bs.getBuffer(),#decompressed stream
-                    os.path.basename(rapi.getInputName()):ogfile
+        dat= ("Exception hit in ModelReader",e,"PluginVer",PluginVer,"PLATFORM",header.platform,"XNA version",header.version)
+        if path:      
+            fn = os.path.basename(rapi.getInputName())
+            with open (rapi.getInputName(),"rb") as f:
+                ogfile = f.read()
+            fname = fn[:-3] + "bin"
+            ds={
+                   fname: bs.getBuffer(),#decompressed stream
+                   os.path.basename(rapi.getInputName()):ogfile
                     
                 }
-                debugData(path,dat,ds)
+            debugData(path,dat,ds)
         
 
 #HELPERS
@@ -451,25 +520,57 @@ def getFileType(data):
     try:
         hdr = XNBHeader(data)
         bs  = NoeBitStream(hdr.payload, NOE_LITTLEENDIAN)
-
-
         rcnt = read_7bit_encoded_int(bs)
         readers = []
         for _ in range(rcnt):
             name_len = read_7bit_encoded_int(bs)
             reader   = bs.readBytes(name_len).decode("utf-8", "ignore")
-            print(reader)
+            #print(reader)
             _ver     = bs.readUInt()
             readers.append(reader)
 
         _shared_cnt = read_7bit_encoded_int(bs)
-        root_index  = readToken(bs)  
+        root_index  = readToken(bs) 
         chosen = getNativeReader(readers, root_index)
         
         return chosen if chosen is not None else ""
     except:
         return ""
 
+def _read_rectangle_list(bs):
+    count = read_7bit_encoded_int(bs)
+    rects = []
+    for _ in range(count):
+        x = bs.readInt()
+        y = bs.readInt()
+        w = bs.readInt()
+        h = bs.readInt()
+        rects.append((x, y, w, h))
+    return rects
+
+def _read_char_list(bs):
+    count = read_7bit_encoded_int(bs)
+    chars = []
+    for _ in range(count):
+        ch = bs.readUShort()
+        chars.append(ch)
+    return chars
+
+def _read_vector3_list(bs):
+    count = read_7bit_encoded_int(bs)
+    vecs = []
+    for _ in range(count):
+        x = bs.readFloat()
+        y = bs.readFloat()
+        z = bs.readFloat()
+        vecs.append((x, y, z))
+    return vecs
+
+def _read_nullable_char(bs):
+    has_value = bs.readUByte()
+    if has_value:
+        return bs.readUShort()
+    return None
 
 def read_7bit_encoded_int(bs, max_bytes=5):
     result = 0
