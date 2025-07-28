@@ -12,7 +12,6 @@ Download noesis here: https://richwhitehouse.com/index.php?content=inc_projects.
 - Comp Types: LZX,LZ4
 # Roadmap
 - Finish model importer
-- SpriteFont2D reader
 # Tested Games
 - Blood & Bacon (PC)
 - Plants Vs Zombies (WinPhone)
