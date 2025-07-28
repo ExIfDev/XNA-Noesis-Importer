@@ -24,15 +24,15 @@ def registerNoesisTypes():
   
     hSpr = noesis.register("XNA SpriteFont", ".xnb")
     noesis.setHandlerTypeCheck(hSpr, ChkXnbSpriteFont)
-    noesis.setHandlerLoadRGBA(hSpr, NotAvaliable)
+    noesis.setHandlerLoadRGBA(hSpr, LoadAsset)
     
     hSnd = noesis.register("XNA SoundEffect", ".xnb")
     noesis.setHandlerTypeCheck(hSnd, ChkXnbSound)
-    noesis.setHandlerLoadRGBA(hSnd, NotAvaliable)
+    noesis.setHandlerLoadRGBA(hSnd, LoadAsset)
     
     hEff = noesis.register("XNA Effect", ".xnb")
     noesis.setHandlerTypeCheck(hEff, ChkXnbEffect)
-    noesis.setHandlerLoadRGBA(hEff, NotAvaliable)
+    noesis.setHandlerLoadRGBA(hEff, LoadAsset)
     
 
 
@@ -64,9 +64,7 @@ def ChkXnbEffect(data):
     return "Effect" in getFileType(data)
 
 
-def NotAvaliable(arg1,arg2):
-    noesis.messagePrompt("This asset type is not supported by the addon!")
-    return 1
+
 
 #ASSET TYPE RESOLVER
 class XNBHeader:
