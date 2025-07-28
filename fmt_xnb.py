@@ -463,7 +463,7 @@ def getFileType(data):
             readers.append(reader)
 
         _shared_cnt = read_7bit_encoded_int(bs)
-        root_index  = readToken(bs)  # 0-based from your helper
+        root_index  = readToken(bs)  
         chosen = getNativeReader(readers, root_index)
         
         return chosen if chosen is not None else ""
