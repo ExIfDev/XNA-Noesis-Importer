@@ -9,7 +9,7 @@ HIDEF_MASK  = 0x01
 COMPRESSED_LZX_MASK = 0x80
 COMPRESSED_LZ4_MASK = 0x40
 
-PluginVer = "0.5"
+PluginVer = "0.6"
 
 PLATFORM_XBOX360 =120
 PLATFORM_PC=119
@@ -200,13 +200,13 @@ def Texture2DReader(bs, texList,header):
                 rgba = unmultiplyAlpha(rgbma) 
                                
             elif surf_fmt == 1:
-                rgba = rapi.imageDecodeRaw(img_data, width, height, "a8b8g8r8")                 
+                rgba = rapi.imageDecodeRaw(img_data, width, height, "a8r8g8b8")                 
                  
             elif surf_fmt == 4:
                 big_endian_data = rapi.swapEndianArray(img_data, 2)
                 rgba = rapi.imageDecodeDXT(big_endian_data, width, height, noesis.FOURCC_DXT1)                
                 
-            elif surf_fmt == 5:
+            elif surf_fmt == 5 or surf_fmt == 30:
                 big_endian_data = rapi.swapEndianArray(img_data, 2)
                 rgba = rapi.imageDecodeDXT(big_endian_data, width, height, noesis.FOURCC_DXT3)   
                              
@@ -638,6 +638,7 @@ def debugData(zip_dir, exception_text, extra_files=None, zip_name_prefix="!debug
                     zf.writestr(arc_name, str(content).encode("utf-8"))
 
     return zip_path
+
 
 
 
